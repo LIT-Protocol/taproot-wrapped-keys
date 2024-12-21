@@ -1,3 +1,4 @@
+
 bitcoin.initEccLib(ecc);
 
 const signTaprootTransaction = async (
