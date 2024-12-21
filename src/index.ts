@@ -9,16 +9,6 @@ import { LitActionResource, LitPKPResource } from "@lit-protocol/auth-helpers";
 import { getEnv } from "../src/utils";
 import fs from "fs";
 
-// import { signSchnorr } from "@bitcoinerlab/secp256k1";
-// import {
-//     AccsDefaultParams,
-//     AuthSig,
-//     SessionKeySignedMessage,
-//     SessionSigsMap,
-//   } from '@lit-protocol/types';
-
-const litActionCodeFile = fs.readFileSync("./actions/bundled-action.js");
-
 bitcoin.initEccLib(ecc);
 const ECPair = ECPairFactory(ecc);
 
@@ -42,13 +32,8 @@ async function main() {
         NETWORK
     );
     console.log("Response: ", response);
-    // const signedTx = await signTaprootTransaction(
-    //     privateKey,
-    //     response.Transaction,
-    //     response.SigHash,
-    //     true
-    // );
-    // console.log("signedTx: ", signedTx);
+    const signature = await obtainSignature(publicKey);
+    console.log("Signature: ", signature);
 }
 
 async function createTaprootTxn(
@@ -102,81 +87,7 @@ async function createTaprootTxn(
     return { Transaction: tx.toHex(), SigHash: hash };
 }
 
-const testLitAction = `
-function getFirstSessionSig(pkpSessionSigs) {
-    const sessionSigsEntries = Object.entries(pkpSessionSigs);
-  
-    if (sessionSigsEntries.length === 0) {
-      throw new Error(
-        \`Invalid pkpSessionSigs, length zero: \${JSON.stringify(pkpSessionSigs)}\`
-      );
-    }
-  
-    const [[, sessionSig]] = sessionSigsEntries;
-    // console.log(\`Session Sig being used: \${JSON.stringify(sessionSig)}\`);
-  
-    return sessionSig;
-}
-function getPkpAddressFromSessionSig(pkpSessionSig) {
-    const sessionSignedMessage = JSON.parse(
-      pkpSessionSig.signedMessage
-    );
-  
-    const capabilities = sessionSignedMessage.capabilities;
-  
-    if (!capabilities || capabilities.length === 0) {
-      throw new Error(
-        \`Capabilities in the session's signedMessage is empty, but required.\`
-      );
-    }
-  
-    const delegationAuthSig = capabilities.find(({ algo }) => algo === 'LIT_BLS');
-  
-    if (!delegationAuthSig) {
-      throw new Error(
-        'SessionSig is not from a PKP; no LIT_BLS capabilities found'
-      );
-    }
-  
-    const pkpAddress = delegationAuthSig.address;
-    // console.log(\`pkpAddress to permit decryption: \${pkpAddress}\`);
-  
-    return pkpAddress;
-}
-
-function getPkpAccessControlCondition(pkpAddress) {
-  if (!ethers.utils.isAddress(pkpAddress)) {
-    throw new Error(
-      \`pkpAddress is not a valid Ethereum Address: \${pkpAddress}\`
-    );
-  }
-
-  return {
-    contractAddress: '',
-    standardContractType: '',
-    chain: "ethereum",
-    method: '',
-    parameters: [':userAddress'],
-    returnValueTest: {
-      comparator: '=',
-      value: pkpAddress,
-    },
-  };
-}
-
-const go = async () => {
-    try {
-        const sessionSig = getFirstSessionSig(pkpSessionSigs);
-        const pkpAddress = getPkpAddressFromSessionSig(sessionSig);
-        const ACC = getPkpAccessControlCondition(pkpAddress);
-        console.log(ACC)
-        Lit.Actions.setResponse({response: ACC})
-    } catch (error) {
-        Lit.Actions.setResponse({response: error.message})
-    }
-}
-go();
-`
+const litActionCodeFile = fs.readFileSync("./actions/bundled-action.js");
 
 async function obtainSignature(pkpPublicKey: any) {
     const ETHEREUM_PRIVATE_KEY = getEnv("ETHEREUM_PRIVATE_KEY");
@@ -215,28 +126,12 @@ async function obtainSignature(pkpPublicKey: any) {
             expiration: new Date(Date.now() + 1000 * 60 * 10).toISOString(), // 10 minutes
         });
 
-        // const sessionSig = getFirstSessionSig(pkpSessionSigs);
-        // const pkpAddress = getPkpAddressFromSessionSig(sessionSig);
-        // const ACC = {
-        //     contractAddress: '',
-        //     standardContractType: '',
-        //     chain: "ethereum",
-        //     method: '',
-        //     parameters: [':userAddress'],
-        //     returnValueTest: {
-        //       comparator: '=',
-        //       value: pkpAddress,
-        //     },
-        //   };
-        // console.log("response: ", ACC);
         const response = await litNodeClient.executeJs({
             sessionSigs: pkpSessionSigs,
             code: litActionCodeFile.toString(),
             jsParams: {
                 pkpSessionSigs: pkpSessionSigs,
                 method: "createWallet",
-                // pkpPublicKey: pkpPublicKey,
-                // dataToSign: dataToSign,
             },
         });
         console.log("Response: ", response);
@@ -247,48 +142,5 @@ async function obtainSignature(pkpPublicKey: any) {
         await litNodeClient?.disconnect();
     }
 }
-
-
-// export function getFirstSessionSig(pkpSessionSigs: SessionSigsMap): AuthSig {
-//     const sessionSigsEntries = Object.entries(pkpSessionSigs);
-  
-//     if (sessionSigsEntries.length === 0) {
-//       throw new Error(
-//         `Invalid pkpSessionSigs, length zero: ${JSON.stringify(pkpSessionSigs)}`
-//       );
-//     }
-  
-//     const [[, sessionSig]] = sessionSigsEntries;
-//     // console.log(`Session Sig being used: ${JSON.stringify(sessionSig)}`);
-  
-//     return sessionSig;
-//   }
-
-// export function getPkpAddressFromSessionSig(pkpSessionSig: AuthSig): string {
-//     const sessionSignedMessage: SessionKeySignedMessage = JSON.parse(
-//       pkpSessionSig.signedMessage
-//     );
-  
-//     const capabilities = sessionSignedMessage.capabilities;
-  
-//     if (!capabilities || capabilities.length === 0) {
-//       throw new Error(
-//         `Capabilities in the session's signedMessage is empty, but required.`
-//       );
-//     }
-  
-//     const delegationAuthSig = capabilities.find(({ algo }) => algo === 'LIT_BLS');
-  
-//     if (!delegationAuthSig) {
-//       throw new Error(
-//         'SessionSig is not from a PKP; no LIT_BLS capabilities found'
-//       );
-//     }
-  
-//     const pkpAddress = delegationAuthSig.address;
-//     // console.log(`pkpAddress to permit decryption: ${pkpAddress}`);
-  
-//     return pkpAddress;
-//   }
 
   obtainSignature(getEnv("PKP_PUBLIC_KEY"));
