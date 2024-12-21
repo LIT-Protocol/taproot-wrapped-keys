@@ -1,0 +1,35 @@
+{
+  "name": "btc-taproot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start:9": "npx tsx src/actions/taproot-action",
+    "start:10": "npx tsx src/index",
+    "prebuild": "node esbuild.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/elliptic": "^6.4.18",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@bitcoin-js/tiny-secp256k1-asmjs": "^2.2.3",
+    "@bitcoinerlab/secp256k1": "^1.2.0",
+    "@mempool/mempool.js": "^2.3.0",
+    "bitcoinjs-lib": "^6.1.7",
+    "buffer": "^6.0.3",
+    "ecpair": "^3.0.0-rc.0",
+    "elliptic": "^6.6.1",
+    "esbuild": "^0.24.2",
+    "ethers": "^5.7.2",
+    "fs": "^0.0.1-security",
+    "glob": "^11.0.0",
+    "lit-wrapper-sdk": "^1.0.0",
+    "tsx": "^4.19.2"
+  }
+}
