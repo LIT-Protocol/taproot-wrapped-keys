@@ -4,9 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start:9": "npx tsx src/actions/taproot-action",
-    "start:10": "npx tsx src/index",
-    "prebuild": "node esbuild.js"
+    "start": "npx tsx src/index",
+    "prebuild": "node esbuild.js",
+    "test": "npm run prebuild && npm run start"
   },
   "keywords": [],
   "author": "",

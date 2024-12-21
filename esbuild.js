@@ -1,7 +1,6 @@
 import { build } from "esbuild";
 
-const run = async () => {
-  await build({
+build({
     entryPoints: ["./src/actions/taproot-action.js"],
     bundle: true,
     minify: false,
@@ -11,7 +10,5 @@ const run = async () => {
     platform: "node",
     metafile: true,
     external: ["ethers"],
-    inject: ["esbuild-shims.js", "buffer-shims.js"],
+    inject: ["esbuild-shims.js", "buffer-shims.js", "bitcoin-shims.js"],
   });
-};
-run();

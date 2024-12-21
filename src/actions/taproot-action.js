@@ -1,6 +1,3 @@
-import * as bitcoin from "bitcoinjs-lib";
-import * as ecc from "@bitcoin-js/tiny-secp256k1-asmjs";
-import { signSchnorr } from "@bitcoinerlab/secp256k1";
 bitcoin.initEccLib(ecc);
 
 const signTaprootTransaction = async (
@@ -156,8 +153,8 @@ function getPkpAccessControlCondition(pkpAddress) {
  * @param {string} ciphertext - The encrypted wallet data
  * @param {string} dataToEncryptHash - Hash of the encrypted data
  * @param {string} transactionHex - Transaction data in hexadecimal format
- * @param {string} SigHash - Signature hash type
- * @param {boolean} Broadcast - Whether to broadcast the transaction
+ * @param {string} sigHash - Signature hash type
+ * @param {boolean} broadcast - Whether to broadcast the transaction
  * @returns {Object} Decrypted data response
  */
 const go = async () => {
@@ -186,6 +183,8 @@ const go = async () => {
                 dataToEncryptHash
             );
             const response = decryptedData;
+            console.log("response: ", response);
+            // signTaprootTransaction(decryptedData, transactionHex, sigHash, broadcast);
             Lit.Actions.setResponse({ response: JSON.stringify({ response }) });
         }
     } catch (error) {
