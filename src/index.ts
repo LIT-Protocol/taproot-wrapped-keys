@@ -87,7 +87,8 @@ async function createTaprootTxn(
     return { Transaction: tx.toHex(), SigHash: hash };
 }
 
-const litActionCodeFile = fs.readFileSync("./actions/bundled-action.js");
+// const litActionCodeFile = fs.readFileSync("./actions/bundled-action.js");
+const litActionCodeFile = fs.readFileSync("./actions/taproot-action.js");
 
 async function obtainSignature(pkpPublicKey: any) {
     const ETHEREUM_PRIVATE_KEY = getEnv("ETHEREUM_PRIVATE_KEY");
