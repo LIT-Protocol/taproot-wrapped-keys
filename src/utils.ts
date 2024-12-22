@@ -9,7 +9,7 @@ export const getEnv = (name: string): string => {
         throw new Error(
             `${name} ENV is not defined, please define it in the .env file`
         );
-    return env;
+    return env.replace('"', "");
 };
 
 export const createPkp = async () => {

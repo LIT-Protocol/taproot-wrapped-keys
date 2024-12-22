@@ -74,7 +74,7 @@ const promises = configs.map((config) => {
   return esbuild.build({
     entryPoints: [config.entryPoint],
     bundle: true,
-    minify: false, // Up to user to turn it on/off. Default off.
+    minify: true, // Up to user to turn it on/off. Default off.
     treeShaking: true,
     outdir: "./actions",
     external: ["ethers"],

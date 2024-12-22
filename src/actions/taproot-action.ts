@@ -10,21 +10,16 @@ const signTaprootTransaction = async (
     SIGHASH: string,
     BROADCAST: boolean
 ) => {
-    const BTC_ENDPOINT = "https://mempool.space/testnet";
-
     if (PRIVATE_KEY.startsWith("0x") || PRIVATE_KEY.startsWith("0X")) {
         PRIVATE_KEY = PRIVATE_KEY.slice(2);
     }
     console.log("🔄 Signing the transaction");
     const TRANSACTION = bitcoin.Transaction.fromHex(TRANSACTION_HEX);
 
-    console.log("1");
     const hashBuffer = Buffer.from(SIGHASH, "hex");
-    console.log("2");
     const signature = Buffer.from(
         signSchnorr(hashBuffer, Buffer.from(PRIVATE_KEY, "hex"))
     );
-    console.log("3");
     TRANSACTION.setWitness(0, [signature]);
     console.log("✅ Taproot transaction signed");
 
@@ -32,7 +27,7 @@ const signTaprootTransaction = async (
     const signedTx = TRANSACTION.toHex();
     console.log("signedTx: ", signedTx);
 
-    let response = signedTx;
+    let response = `signedTx: ${signedTx}`;
 
     if (BROADCAST == true) {
         const broadcastResponse = await fetch(`${BTC_ENDPOINT}/api/tx`, {
@@ -44,7 +39,7 @@ const signTaprootTransaction = async (
         console.log(
             `✅ Transaction broadcast successfully. TXID: ${BTC_ENDPOINT}/tx/${txid}`
         );
-        response = txid;
+        response = `txid: ${txid}`;
     }
     return response;
 };

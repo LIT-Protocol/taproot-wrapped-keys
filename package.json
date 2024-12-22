@@ -4,9 +4,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "npx tsx src/index",
+    "test": "npm run prebuild && npm run create",
     "prebuild": "node esbuild.js",
-    "test": "npm run prebuild && npm run start"
+    "create": "tsx src/index create-wallet",
+    "txn": "tsx src/index create-sign-txn",
+    "pkp": "tsx src/index create-pkp"
   },
   "keywords": [],
   "author": "",
@@ -19,14 +21,15 @@
   "dependencies": {
     "@bitcoin-js/tiny-secp256k1-asmjs": "^2.2.3",
     "@bitcoinerlab/secp256k1": "^1.2.0",
+    "@lit-protocol/lit-auth-client": "^7.0.2",
+    "@lit-protocol/lit-node-client": "^7.0.2",
     "bitcoinjs-lib": "^6.1.7",
     "buffer": "^6.0.3",
+    "dotenv": "^16.4.7",
     "ecpair": "^3.0.0-rc.0",
     "esbuild": "^0.24.2",
     "ethers": "^5.7.2",
-    "fs": "^0.0.1-security",
     "glob": "^11.0.0",
-    "lit-wrapper-sdk": "^1.0.0",
     "tsx": "^4.19.2"
   }
 }

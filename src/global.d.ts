@@ -404,4 +404,5 @@ declare global {
     const transactionHex: string;
     const sigHash: string;
     const broadcast: boolean;
+    const BTC_ENDPOINT: string;
 }
