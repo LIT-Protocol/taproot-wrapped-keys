@@ -1,5 +1,4 @@
 import { ethers as Ethers } from "ethers";
-import { SupraAccount, SupraClient, BCS, HexString } from "supra-l1-sdk";
 
 declare global {
     export declare namespace Lit {
