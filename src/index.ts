@@ -14,26 +14,62 @@ const ECPair = ECPairFactory(ecc);
 
 const BTC_ENDPOINT = "https://mempool.space/testnet";
 
-async function main() {
-    let privateKey;
-    privateKey =
-        "0x19a3808c69a5a6434d7c16bf34417efe6a9c02da4b17df741ffbf122d9a57eac";
-    const publicKey = ethers.utils.computePublicKey(privateKey);
+const PKP_PUBLIC_KEY = getEnv("PKP_PUBLIC_KEY");
+const LIT_ACTION = fs.readFileSync("./actions/taproot-action.js");
+
+// createWallet();
+createAndSignTxn()
+
+async function createWallet() {
+    let params = {
+        method: "createWallet",
+    };
+    const response = await executeJsHandler(PKP_PUBLIC_KEY, params);
+
+    // @ts-ignore
+    const parsedResponse = JSON.parse(response?.response);
+
+    const publicKey = parsedResponse.publicKey;
+    const ciphertext = parsedResponse.ciphertext;
+    const dataHash = parsedResponse.dataToEncryptHash;
+
+    console.log("Public Key:", publicKey);
+    console.log("Ciphertext:", ciphertext);
+    console.log("Data Hash:", dataHash);
+}
+
+async function createAndSignTxn() {
+    const publicKey =
+        "0x04b5051e04e8e6eb40a312d61913f35e92692738d3507ed6118618b7d1e33d6aa58813cd196caa20ff65af1e38c4860ebdb2d63c1f7d2bd93c6df9e18ce4c97667";
     const destinationAddress =
         "tb1pfgj62z9zdc3mm4we7lhhq06lgvmyalxfac7q7vk4u6qw4rgx49kq2hheus";
-    const amountToSend = 20000;
-    const fee = 11000;
+    const amountToSend = 8000;
+    const fee = 3000;
     const NETWORK = bitcoin.networks.testnet;
-    const response = await createTaprootTxn(
+
+    const txnResponse = await createTaprootTxn(
         publicKey,
         destinationAddress,
         amountToSend,
         fee,
         NETWORK
     );
-    console.log("Response: ", response);
-    const signature = await obtainSignature(publicKey);
-    console.log("Signature: ", signature);
+    console.log("Transactions Response: ", txnResponse);
+
+    const ciphertext =
+        "pUoTkA1EhOm1sR190B41dwVFt7rT8RRTs0teKF3yH+GUDvx2dKuxBXAO7CZ7bcDuhfBQiwwzvMBGv4D2gY6gz1xo0I4maXPuQH+NcFskxDxHhgWf5PU2SSz3sYCKrYkBCPdh8YAg1uJC1487VOMk05IknejtcEPH7fpZP0wPNs3h5pPMIPI7+QSgueWSYuDQSCHDGkNwd/gC";
+    const dataToEncryptHash =
+        "62c97ef37c50131b33c3a225f76fcc813d0bd198bb5f53a2b52de796034b09f9";
+    const broadcast = true;
+
+    const signResponse = await obtainSignature(
+        ciphertext,
+        dataToEncryptHash,
+        txnResponse.Transaction,
+        txnResponse.SigHash,
+        broadcast
+    );
+    console.log("Signature Response: ", signResponse);
 }
 
 async function createTaprootTxn(
@@ -84,13 +120,29 @@ async function createTaprootTxn(
         bitcoin.Transaction.SIGHASH_DEFAULT
     );
     console.log("✅ Taproot transaction created");
-    return { Transaction: tx.toHex(), SigHash: hash };
+    return { Transaction: tx.toHex(), SigHash: hash.toString('hex') };
 }
 
-// const litActionCodeFile = fs.readFileSync("./actions/bundled-action.js");
-const litActionCodeFile = fs.readFileSync("./actions/taproot-action.js");
+async function obtainSignature(
+    ciphertext: string,
+    dataToEncryptHash: string,
+    transactionHex: string,
+    sigHash: string,
+    broadcast: boolean
+) {
+    let params = {
+        method: "signTaprootTxn",
+        ciphertext,
+        dataToEncryptHash,
+        transactionHex,
+        sigHash,
+        broadcast,
+    };
+    const response = await executeJsHandler(PKP_PUBLIC_KEY, params);
+    return response;
+}
 
-async function obtainSignature(pkpPublicKey: any) {
+async function executeJsHandler(pkpPublicKey: string, params: Object) {
     const ETHEREUM_PRIVATE_KEY = getEnv("ETHEREUM_PRIVATE_KEY");
     const litNodeClient = new LitNodeClient({
         litNetwork: "datil-dev",
@@ -129,13 +181,13 @@ async function obtainSignature(pkpPublicKey: any) {
 
         const response = await litNodeClient.executeJs({
             sessionSigs: pkpSessionSigs,
-            code: litActionCodeFile.toString(),
+            code: LIT_ACTION.toString(),
             jsParams: {
-                pkpSessionSigs: pkpSessionSigs,
-                method: "createWallet",
+                ...params,
+                pkpSessionSigs,
             },
         });
-        console.log("Response: ", response);
+
         return response;
     } catch (error) {
         console.log("Error: ", error);
@@ -143,5 +195,3 @@ async function obtainSignature(pkpPublicKey: any) {
         await litNodeClient?.disconnect();
     }
 }
-
-  obtainSignature(getEnv("PKP_PUBLIC_KEY"));

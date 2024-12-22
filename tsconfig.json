@@ -12,5 +12,5 @@
       "forceConsistentCasingInFileNames": true
     },
     "include": ["src/**/*", "src/global.d.ts"],
-    "exclude": ["node_modules", "dist", "./src/actions/**"]
+    "exclude": ["node_modules", "dist"]
   }

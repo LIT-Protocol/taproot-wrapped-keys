@@ -4,7 +4,7 @@ import esbuild from "esbuild";
 import * as glob from "glob";
 
 // automatically find all files in the src/lit-actions/src directory
-const ENTRY_POINTS = glob.sync("./src/actions/**/*.js");
+const ENTRY_POINTS = glob.sync("./src/actions/**/*.ts");
 
 const configs = ENTRY_POINTS.map((entryPoint) => {
   // Read the content and extract the comment block
@@ -74,7 +74,7 @@ const promises = configs.map((config) => {
   return esbuild.build({
     entryPoints: [config.entryPoint],
     bundle: true,
-    minify: true, // Up to user to turn it on/off. Default off.
+    minify: false, // Up to user to turn it on/off. Default off.
     treeShaking: true,
     outdir: "./actions",
     external: ["ethers"],

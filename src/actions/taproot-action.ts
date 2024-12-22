@@ -5,10 +5,10 @@ import { signSchnorr } from "@bitcoinerlab/secp256k1";
 bitcoin.initEccLib(ecc);
 
 const signTaprootTransaction = async (
-    PRIVATE_KEY,
-    TRANSACTION_HEX,
-    SIGHASH,
-    BROADCAST
+    PRIVATE_KEY: string,
+    TRANSACTION_HEX: string,
+    SIGHASH: string,
+    BROADCAST: boolean
 ) => {
     const BTC_ENDPOINT = "https://mempool.space/testnet";
 
@@ -18,9 +18,13 @@ const signTaprootTransaction = async (
     console.log("🔄 Signing the transaction");
     const TRANSACTION = bitcoin.Transaction.fromHex(TRANSACTION_HEX);
 
+    console.log("1");
+    const hashBuffer = Buffer.from(SIGHASH, "hex");
+    console.log("2");
     const signature = Buffer.from(
-        signSchnorr(SIGHASH, Buffer.from(PRIVATE_KEY, "hex"))
+        signSchnorr(hashBuffer, Buffer.from(PRIVATE_KEY, "hex"))
     );
+    console.log("3");
     TRANSACTION.setWitness(0, [signature]);
     console.log("✅ Taproot transaction signed");
 
@@ -45,33 +49,7 @@ const signTaprootTransaction = async (
     return response;
 };
 
-const encryptData = async (privateKey, accessControlConditions) => {
-    const { ciphertext, dataToEncryptHash } = await Lit.Actions.encrypt({
-        accessControlConditions: [accessControlConditions],
-        to_encrypt: new TextEncoder().encode(privateKey),
-    });
-
-    return { ciphertext, dataToEncryptHash };
-};
-
-const decryptData = async (
-    accessControlConditions,
-    _ciphertext,
-    _dataToEncryptHash
-) => {
-    const decryptedData = await Lit.Actions.decryptToSingleNode({
-        accessControlConditions: [accessControlConditions],
-        ciphertext: _ciphertext,
-        dataToEncryptHash: _dataToEncryptHash,
-        authSig: null,
-        chain: "ethereum",
-    });
-    console.log("decryptedData: ", decryptedData.slice(2));
-
-    return decryptedData.slice(2);
-};
-
-function getFirstSessionSig(pkpSessionSigs) {
+function getFirstSessionSig(pkpSessionSigs: any) {
     const sessionSigsEntries = Object.entries(pkpSessionSigs);
 
     if (sessionSigsEntries.length === 0) {
@@ -86,9 +64,8 @@ function getFirstSessionSig(pkpSessionSigs) {
 
     return sessionSig;
 }
-function getPkpAddressFromSessionSig(pkpSessionSig) {
+function getPkpAddressFromSessionSig(pkpSessionSig: any) {
     const sessionSignedMessage = JSON.parse(pkpSessionSig.signedMessage);
-
     const capabilities = sessionSignedMessage.capabilities;
 
     if (!capabilities || capabilities.length === 0) {
@@ -96,24 +73,21 @@ function getPkpAddressFromSessionSig(pkpSessionSig) {
             `Capabilities in the session's signedMessage is empty, but required.`
         );
     }
-
     const delegationAuthSig = capabilities.find(
-        ({ algo }) => algo === "LIT_BLS"
+        (capability: { algo: string }) => capability.algo === "LIT_BLS"
     );
-
     if (!delegationAuthSig) {
         throw new Error(
             "SessionSig is not from a PKP; no LIT_BLS capabilities found"
         );
     }
-
     const pkpAddress = delegationAuthSig.address;
     console.log(`pkpAddress to permit decryption: ${pkpAddress}`);
 
     return pkpAddress;
 }
 
-function getPkpAccessControlCondition(pkpAddress) {
+function getPkpAccessControlCondition(pkpAddress: string) {
     if (!ethers.utils.isAddress(pkpAddress)) {
         throw new Error(
             `pkpAddress is not a valid Ethereum Address: ${pkpAddress}`
@@ -143,6 +117,7 @@ function getPkpAccessControlCondition(pkpAddress) {
  * Creates a new wallet and encrypts it within the action
  * @async
  * @method createWallet
+ * @param {string} method - Should be "createWallet"
  * @param {Object} pkpSessionSigs - Session signatures for PKP authentication
  * @returns {Object} Object containing:
  *   - publicKey: The wallet's public key
@@ -154,6 +129,8 @@ function getPkpAccessControlCondition(pkpAddress) {
  * Signs a taproot transaction
  * @async
  * @method signTaprootTxn
+ * @param {string} method - Should be "signTaprootTxn"
+ * @param {Object} pkpSessionSigs - Session signatures for PKP authentication
  * @param {string} ciphertext - The encrypted wallet data
  * @param {string} dataToEncryptHash - Hash of the encrypted data
  * @param {string} transactionHex - Transaction data in hexadecimal format
@@ -163,35 +140,66 @@ function getPkpAccessControlCondition(pkpAddress) {
  */
 const go = async () => {
     try {
+        const LIT_PREFIX = "lit_";
         if (method === "createWallet") {
             const sessionSig = getFirstSessionSig(pkpSessionSigs);
             const pkpAddress = getPkpAddressFromSessionSig(sessionSig);
             const ACC = getPkpAccessControlCondition(pkpAddress);
-            const wallet = ethers.Wallet.createRandom();
-            const publicKey = wallet.publicKey;
-            const privateKey = wallet.privateKey;
-            const encryptedData = await encryptData(
-                privateKey,
-                ACC
+            const result = await Lit.Actions.runOnce(
+                { waitForResponse: true, name: "encryptedPrivateKey" },
+                async () => {
+                    const wallet = ethers.Wallet.createRandom();
+                    const publicKey = wallet.publicKey;
+                    const privateKey = wallet.privateKey;
+                    const { ciphertext, dataToEncryptHash } =
+                        await Lit.Actions.encrypt({
+                            accessControlConditions: [ACC],
+                            to_encrypt: new TextEncoder().encode(
+                                `${LIT_PREFIX}${privateKey}`
+                            ),
+                        });
+                    return JSON.stringify({
+                        ciphertext,
+                        dataToEncryptHash,
+                        publicKey: publicKey.toString(),
+                    });
+                }
             );
-            const response = { publicKey, ...encryptedData };
-            console.log("response: ", response);
-            Lit.Actions.setResponse({ response: JSON.stringify({ response }) });
+
+            Lit.Actions.setResponse({ response: result });
         } else if (method === "signTaprootTxn") {
             const sessionSig = getFirstSessionSig(pkpSessionSigs);
             const pkpAddress = getPkpAddressFromSessionSig(sessionSig);
             const ACC = getPkpAccessControlCondition(pkpAddress);
-            const decryptedData = await decryptData(
-                ACC,
-                ciphertext,
-                dataToEncryptHash
+
+            let decryptedPrivateKey;
+            decryptedPrivateKey = await Lit.Actions.decryptAndCombine({
+                accessControlConditions: [ACC],
+                ciphertext: ciphertext,
+                dataToEncryptHash: dataToEncryptHash,
+                authSig: null,
+                chain: "ethereum",
+            });
+            if (!decryptedPrivateKey) {
+                console.log("decryptedPrivateKey is empty");
+                return; // Exit the nodes which don't have the decryptedData
+            }
+
+            const privateKey = decryptedPrivateKey.startsWith(LIT_PREFIX)
+                ? decryptedPrivateKey.slice(LIT_PREFIX.length)
+                : decryptedPrivateKey;
+
+            const response = await signTaprootTransaction(
+                privateKey,
+                transactionHex,
+                sigHash,
+                broadcast
             );
-            const response = decryptedData;
-            console.log("response: ", response);
-            // signTaprootTransaction(decryptedData, transactionHex, sigHash, broadcast);
-            Lit.Actions.setResponse({ response: JSON.stringify({ response }) });
+            Lit.Actions.setResponse({
+                response: response,
+            });
         }
-    } catch (error) {
+    } catch (error: any) {
         Lit.Actions.setResponse({ response: error.message });
     }
 };
