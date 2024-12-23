@@ -6,9 +6,9 @@
   "scripts": {
     "test": "npm run prebuild && npm run create",
     "prebuild": "node esbuild.js",
+    "pkp": "tsx src/index create-pkp",
     "create": "tsx src/index create-wallet",
-    "txn": "tsx src/index create-sign-txn",
-    "pkp": "tsx src/index create-pkp"
+    "txn": "tsx src/index create-sign-txn"
   },
   "keywords": [],
   "author": "",
